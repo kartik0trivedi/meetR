@@ -25,7 +25,7 @@ Stores the Sheet ID for use by \code{\link[=meetr_launch]{meetr_launch()}}.
 }
 \examples{
 \dontrun{
-meetr_auth("1XjC2IZYfRuzTlJvsr-M8MU3hiwcAXwR00Sn08A3gU0A")
+meetr_auth("YOUR_SHEET_ID")
 }
 
 }

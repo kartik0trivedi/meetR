@@ -66,15 +66,12 @@ compute_slot_counts <- function(resp_df) {
                stringsAsFactors = FALSE)
   }))
 
-  agg <- aggregate(user_name ~ slot, data = expanded, FUN = function(x) {
-    list(count = length(x), names = paste(x, collapse = ", "))
-  })
-  data.frame(
-    slot  = agg$slot,
-    count = vapply(agg$user_name, function(x) x$count, integer(1)),
-    names = vapply(agg$user_name, function(x) x$names, character(1)),
-    stringsAsFactors = FALSE
-  )
+  counts <- aggregate(user_name ~ slot, data = expanded, FUN = length)
+  names(counts)[2] <- "count"
+  nms    <- aggregate(user_name ~ slot, data = expanded,
+                      FUN = function(x) paste(x, collapse = ", "))
+  names(nms)[2] <- "names"
+  merge(counts, nms, by = "slot")
 }
 
 # ---- Grid builder --------------------------------------------------------

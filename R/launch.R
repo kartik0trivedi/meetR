@@ -28,7 +28,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' meetr_auth("1XjC2IZYfRuzTlJvsr-M8MU3hiwcAXwR00Sn08A3gU0A")
+#' meetr_auth("YOUR_SHEET_ID")
 #'
 #' # Use the bundled sample CSV as a starting point
 #' sample_csv <- system.file("extdata", "sample_availability.csv", package = "meetR")
@@ -125,10 +125,22 @@ meetr_launch <- function(
   # Write config
   saveRDS(config, file.path(deploy_dir, "config.rds"))
 
-  # Copy cached OAuth token if present (for non-service-account auth)
-  if (dir.exists(".secrets")) {
+  # Bundle service account JSON if one was used in meetr_auth()
+  creds_path <- Sys.getenv("MEETR_CREDENTIALS_PATH")
+  if (nchar(creds_path) > 0 && file.exists(creds_path)) {
+    file.copy(creds_path, file.path(deploy_dir, "credentials.json"))
+    message("meetR: bundling service account credentials for deployment.")
+  } else if (dir.exists(".secrets")) {
+    # Fallback: cached OAuth token
     file.copy(".secrets", deploy_dir, recursive = TRUE)
     message("meetR: bundling .secrets/ for deployment.")
+  } else {
+    warning(
+      "meetR: no credentials found to bundle. ",
+      "The deployed app may fail to authenticate with Google Sheets. ",
+      "Call meetr_auth(sheet_id, path = 'service-account.json') before deploying.",
+      call. = FALSE
+    )
   }
 
   message("meetR: deploying to shinyapps.io as '", app_name, "'...")

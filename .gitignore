@@ -12,3 +12,5 @@ config.rds
 # R package build artifacts
 *.tar.gz
 *.Rcheck/
+
+test.R

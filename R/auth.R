@@ -15,13 +15,15 @@
 #'
 #' @examples
 #' \dontrun{
-#' meetr_auth("1XjC2IZYfRuzTlJvsr-M8MU3hiwcAXwR00Sn08A3gU0A")
+#' meetr_auth("YOUR_SHEET_ID")
 #' }
 #'
 #' @export
 meetr_auth <- function(sheet_id, path = NULL) {
   if (!is.null(path)) {
+    if (!file.exists(path)) stop("Credentials file not found: ", path, call. = FALSE)
     googlesheets4::gs4_auth(path = path)
+    Sys.setenv(MEETR_CREDENTIALS_PATH = normalizePath(path))
   } else if (dir.exists(".secrets")) {
     googlesheets4::gs4_auth(cache = ".secrets", email = TRUE)
   } else {

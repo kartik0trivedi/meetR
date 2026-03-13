@@ -52,7 +52,7 @@ Multiple rows per date are allowed (e.g. morning + afternoon blocks).
 }
 \examples{
 \dontrun{
-meetr_auth("1XjC2IZYfRuzTlJvsr-M8MU3hiwcAXwR00Sn08A3gU0A")
+meetr_auth("YOUR_SHEET_ID")
 
 # Use the bundled sample CSV as a starting point
 sample_csv <- system.file("extdata", "sample_availability.csv", package = "meetR")
