@@ -115,7 +115,7 @@ GRID_CSS <- HTML('
 }
 body { font-family:"Helvetica Neue", Arial, sans-serif; background:#f4f6f9; }
 .container-fluid { max-width:1100px; margin:0 auto; padding:24px; }
-.app-brand { font-size:2.2rem; font-weight:900; color:#0d6efd; letter-spacing:-2px; }
+.app-brand { font-size:2.2rem; font-weight:700; color:#0d6efd; letter-spacing:0.5px; }
 .app-sub   { color:#6c757d; margin-bottom:24px; }
 ')
 
