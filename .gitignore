@@ -1,0 +1,14 @@
+# R
+.Rhistory
+.Rdata
+.Ruserdata
+*.Rproj.user/
+
+# meetR secrets and runtime files
+.secrets/
+config.rds
+*.json
+
+# R package build artifacts
+*.tar.gz
+*.Rcheck/

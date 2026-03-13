@@ -1,0 +1,26 @@
+Package: meetR
+Title: Open-Source Group Scheduling with Shiny and Google Sheets
+Version: 0.1.0
+Authors@R:
+    person("Kartik", "Trivedi", email = "kartik0trivedi@gmail.com",
+           role = c("aut", "cre"))
+Description: Launch a when2meet-style availability poll directly from R.
+    Provide a CSV of proposed dates and hours, authenticate with Google
+    Sheets, and meetR creates a shareable Shiny app that collects and
+    visualises group availability in real time.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1.0)
+Imports:
+    dplyr (>= 1.1.0),
+    googlesheets4 (>= 1.1.0),
+    shiny (>= 1.7.0),
+    tidyr (>= 1.3.0)
+Suggests:
+    ggplot2 (>= 3.4.0),
+    lubridate (>= 1.9.0),
+    rsconnect (>= 1.2.0),
+    testthat (>= 3.0.0)

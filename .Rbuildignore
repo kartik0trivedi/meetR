@@ -1,0 +1,4 @@
+^\.secrets$
+^config\.rds$
+^LICENSE\.md$
+^README\.md$
