@@ -15,6 +15,10 @@
 #' @param event_name Display name for the event shown to respondents.
 #' @param app_title Title shown in the browser tab / app header.
 #'   Defaults to `"meetR"`.
+#' @param timezone An Olson timezone name (e.g. `"America/Chicago"`,
+#'   `"Europe/London"`, `"UTC"`). Displayed in the app so respondents know
+#'   which timezone the hours refer to. Defaults to the system timezone via
+#'   `Sys.timezone()`.
 #' @param sheet_id Google Sheets spreadsheet ID. Defaults to the value stored
 #'   by [meetr_auth()].
 #' @param deploy If `TRUE`, deploy the app to shinyapps.io instead of running
@@ -45,12 +49,21 @@ meetr_launch <- function(
   csv,
   event_name,
   app_title = "meetR",
+  timezone  = Sys.timezone(),
   sheet_id  = Sys.getenv("MEETR_SHEET_ID"),
   deploy    = FALSE,
   app_name  = .slugify(app_title),
   ...
 ) {
   .check_sheet_id(sheet_id)
+
+  if (!timezone %in% OlsonNames()) {
+    stop(
+      "'", timezone, "' is not a recognised timezone. ",
+      "See OlsonNames() for valid values.",
+      call. = FALSE
+    )
+  }
 
   if (!file.exists(csv)) {
     stop("CSV file not found: ", csv, call. = FALSE)
@@ -78,6 +91,7 @@ meetr_launch <- function(
     event_id   = event_id,
     event_name = event_name,
     app_title  = app_title,
+    timezone   = timezone,
     slots      = slots
   )
 

@@ -24,6 +24,7 @@ if (is.null(config)) {
     event_id   = Sys.getenv("MEETR_EVENT_ID"),
     event_name = Sys.getenv("MEETR_EVENT_NAME", unset = "Untitled Event"),
     app_title  = Sys.getenv("MEETR_APP_TITLE",  unset = "meetR"),
+    timezone   = Sys.getenv("MEETR_TIMEZONE",   unset = "UTC"),
     slots      = character(0)
   )
 }
@@ -32,6 +33,8 @@ SHEET_ID   <- config$sheet_id
 EVENT_ID   <- config$event_id
 EVENT_NAME <- config$event_name
 APP_TITLE  <- config$app_title
+EV_TZ      <- if (!is.null(config$timezone) && nchar(config$timezone) > 0)
+                 config$timezone else "UTC"
 EV_SLOTS   <- config$slots
 
 # ---- Auth ----------------------------------------------------------------
@@ -144,6 +147,12 @@ ui <- fluidPage(
           p(
             format(min(EV_DATES), "%b %d"), "\u2013",
             format(max(EV_DATES), "%b %d, %Y"),
+            HTML(paste0(
+              "&nbsp;&middot;&nbsp;",
+              "<span style='background:#e9ecef; border-radius:4px;",
+              " padding:1px 7px; font-size:0.82em;'>",
+              EV_TZ, "</span>"
+            )),
             style = "color:#6c757d; margin:4px 0 0 0;"
           )
         ),
@@ -167,7 +176,8 @@ ui <- fluidPage(
                 " = your selection &nbsp;|&nbsp; ",
                 "<span style='color:#2e7d32;font-weight:bold;'>Green</span>",
                 " = group overlap &nbsp;|&nbsp; ",
-                "<span style='color:#aaa;'>Grey</span> = outside this event"
+                "<span style='color:#aaa;'>Grey</span> = outside this event",
+                "&nbsp;&nbsp;<b>All times: ", EV_TZ, "</b>"
               )),
               style = "font-size:0.88em; color:#6c757d; margin-bottom:8px;"),
               div(style = "overflow-x:auto;", uiOutput("grid_ui"))

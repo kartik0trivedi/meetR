@@ -26,7 +26,7 @@ save_response <- function(sheet_id, event_id, user_name, selected_slots) {
       event_id     = event_id,
       user_name    = user_name,
       slots        = paste(selected_slots, collapse = ","),
-      submitted_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S"),
+      submitted_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
       stringsAsFactors = FALSE
     ),
     sheet = "responses"

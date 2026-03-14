@@ -12,7 +12,7 @@ utils::globalVariables(c(
       event_id   = event_id,
       event_name = event_name,
       slots      = paste(slots, collapse = ","),
-      created_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S"),
+      created_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
       stringsAsFactors = FALSE
     ),
     sheet = "events"
@@ -26,7 +26,7 @@ utils::globalVariables(c(
       event_id     = event_id,
       user_name    = user_name,
       slots        = paste(selected_slots, collapse = ","),
-      submitted_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S"),
+      submitted_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
       stringsAsFactors = FALSE
     ),
     sheet = "responses"

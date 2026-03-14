@@ -8,6 +8,7 @@ meetr_launch(
   csv,
   event_name,
   app_title = "meetR",
+  timezone = Sys.timezone(),
   sheet_id = Sys.getenv("MEETR_SHEET_ID"),
   deploy = FALSE,
   app_name = .slugify(app_title),
@@ -21,6 +22,11 @@ meetr_launch(
 
 \item{app_title}{Title shown in the browser tab / app header.
 Defaults to \code{"meetR"}.}
+
+\item{timezone}{An Olson timezone name (e.g. \code{"America/Chicago"},
+\code{"Europe/London"}, \code{"UTC"}). Displayed in the app so respondents know
+which timezone the hours refer to. Defaults to the system timezone via
+\code{Sys.timezone()}.}
 
 \item{sheet_id}{Google Sheets spreadsheet ID. Defaults to the value stored
 by \code{\link[=meetr_auth]{meetr_auth()}}.}
