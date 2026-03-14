@@ -49,8 +49,25 @@ if (file.exists("credentials.json")) {
 
 # ---- Constants from config -----------------------------------------------
 
+# EV_DATES is in organizer TZ — used for the event header date range display.
+# The interactive grid uses slot_map() which respects the respondent's chosen timezone.
 EV_DATES <- slots_to_dates(EV_SLOTS)
-EV_HOURS <- slots_to_hours(EV_SLOTS)
+
+# Curated list of common IANA timezones shown in the selector.
+# EV_TZ is prepended so the organizer's TZ is always available and appears first.
+COMMON_TIMEZONES <- unique(c(
+  EV_TZ,
+  "UTC",
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Anchorage", "Pacific/Honolulu",
+  "America/Toronto", "America/Vancouver", "America/Sao_Paulo",
+  "Europe/London", "Europe/Dublin", "Europe/Paris", "Europe/Berlin",
+  "Europe/Rome", "Europe/Stockholm", "Europe/Moscow",
+  "Africa/Cairo", "Africa/Johannesburg",
+  "Asia/Dubai", "Asia/Kolkata", "Asia/Bangkok", "Asia/Singapore",
+  "Asia/Shanghai", "Asia/Tokyo", "Asia/Seoul",
+  "Australia/Perth", "Australia/Sydney", "Pacific/Auckland"
+))
 
 # ---- JS / CSS ------------------------------------------------------------
 
@@ -151,7 +168,7 @@ ui <- fluidPage(
               "&nbsp;&middot;&nbsp;",
               "<span style='background:#e9ecef; border-radius:4px;",
               " padding:1px 7px; font-size:0.82em;'>",
-              EV_TZ, "</span>"
+              "Organizer timezone: ", EV_TZ, "</span>"
             )),
             style = "color:#6c757d; margin:4px 0 0 0;"
           )
@@ -162,6 +179,13 @@ ui <- fluidPage(
             column(3,
               textInput("user_name", "Your Name",
                 placeholder = "Enter your name\u2026"),
+              selectInput(
+                "resp_tz",
+                "View times in:",
+                choices  = COMMON_TIMEZONES,
+                selected = EV_TZ,
+                width    = "100%"
+              ),
               actionButton("btn_submit", "Save My Availability",
                 class = "btn-success",
                 style = "width:100%; margin-top:8px;"),
@@ -170,16 +194,7 @@ ui <- fluidPage(
               uiOutput("participant_badges")
             ),
             column(9,
-              p(HTML(paste0(
-                "<b>Click or drag</b> to mark when you're free.&nbsp;",
-                "<span style='color:#0d6efd;font-weight:bold;'>Blue</span>",
-                " = your selection &nbsp;|&nbsp; ",
-                "<span style='color:#2e7d32;font-weight:bold;'>Green</span>",
-                " = group overlap &nbsp;|&nbsp; ",
-                "<span style='color:#aaa;'>Grey</span> = outside this event",
-                "&nbsp;&nbsp;<b>All times: ", EV_TZ, "</b>"
-              )),
-              style = "font-size:0.88em; color:#6c757d; margin-bottom:8px;"),
+              uiOutput("grid_header"),
               div(style = "overflow-x:auto;", uiOutput("grid_ui"))
             )
           )
@@ -205,9 +220,31 @@ server <- function(input, output, session) {
     compute_slot_counts(responses())
   })
 
+  # Recompute display positions whenever the respondent changes their timezone.
+  # data-slot in each cell always holds the original (organizer-TZ) slot ID,
+  # so submitted values require no server-side remapping.
+  slot_map <- reactive({
+    tz <- input$resp_tz %||% EV_TZ
+    slots_in_tz(EV_SLOTS, EV_TZ, tz)
+  })
+
+  output$grid_header <- renderUI({
+    tz <- input$resp_tz %||% EV_TZ
+    p(HTML(paste0(
+      "<b>Click or drag</b> to mark when you're free.&nbsp;",
+      "<span style='color:#0d6efd;font-weight:bold;'>Blue</span>",
+      " = your selection &nbsp;|&nbsp; ",
+      "<span style='color:#2e7d32;font-weight:bold;'>Green</span>",
+      " = group overlap &nbsp;|&nbsp; ",
+      "<span style='color:#aaa;'>Grey</span> = outside this event",
+      "&nbsp;&nbsp;<b>All times: ", tz, "</b>"
+    )),
+    style = "font-size:0.88em; color:#6c757d; margin-bottom:8px;")
+  })
+
   output$grid_ui <- renderUI({
     n_users <- n_distinct(responses()$user_name)
-    build_grid(EV_DATES, EV_HOURS, EV_SLOTS, slot_counts(), n_users)
+    build_grid(slot_map(), slot_counts(), n_users)
   })
 
   output$participant_badges <- renderUI({
@@ -221,7 +258,9 @@ server <- function(input, output, session) {
     }))
   })
 
-  # Pre-fill user's previous selections when they type their name
+  # Pre-fill user's previous selections when they type their name.
+  # prev slots are original (organizer-TZ) slot IDs; data-slot on each cell
+  # also holds original IDs, so this works regardless of resp_tz.
   observeEvent(input$user_name, {
     req(nchar(trimws(input$user_name %||% "")) > 0)
     resp  <- responses()
@@ -260,7 +299,7 @@ server <- function(input, output, session) {
     if (nrow(responses()) == 0) return(NULL)
     div(class = "card",
       h4("Group Availability Heatmap"),
-      p("Each cell shows how many people are free at that time.",
+      p(paste0("Each cell shows how many people are free at that time. Times shown in organizer timezone (", EV_TZ, ")."),
         style = "color:#6c757d; font-size:0.88em;"),
       plotOutput("heatmap_plot", height = "300px")
     )
@@ -274,19 +313,20 @@ server <- function(input, output, session) {
     skeleton <- data.frame(slot = EV_SLOTS, stringsAsFactors = FALSE) |>
       mutate(
         slot_date = as.Date(substr(slot, 1, 10)),
-        slot_hour = as.integer(substr(slot, 12, 13))
+        slot_mins = as.integer(substr(slot, 12, 13)) * 60L +
+                    as.integer(substr(slot, 15, 16))
       )
 
     plot_data <- skeleton |>
       left_join(sc, by = "slot") |>
       mutate(count = tidyr::replace_na(count, 0L))
 
-    all_hours <- sort(unique(plot_data$slot_hour))
+    all_mins <- sort(unique(plot_data$slot_mins))
 
     ggplot(plot_data,
       aes(
         x    = factor(slot_date),
-        y    = factor(slot_hour, levels = rev(all_hours)),
+        y    = factor(slot_mins, levels = rev(all_mins)),
         fill = count
       )
     ) +
@@ -300,7 +340,10 @@ server <- function(input, output, session) {
         limits = c(0, n_users), name = "# Available"
       ) +
       scale_x_discrete(labels = function(x) format(as.Date(x), "%a\n%m/%d")) +
-      scale_y_discrete(labels = function(y) format_hour(as.integer(y))) +
+      scale_y_discrete(labels = function(y) {
+        mins <- as.integer(y)
+        format_slot_time(mins %/% 60L, mins %% 60L)
+      }) +
       labs(x = NULL, y = NULL) +
       theme_minimal(base_size = 13) +
       theme(

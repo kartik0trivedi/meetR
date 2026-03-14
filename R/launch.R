@@ -19,6 +19,9 @@
 #'   `"Europe/London"`, `"UTC"`). Displayed in the app so respondents know
 #'   which timezone the hours refer to. Defaults to the system timezone via
 #'   `Sys.timezone()`.
+#' @param granularity Slot duration in minutes. Must be `15`, `30`, or `60`
+#'   (default). Controls how finely the time grid is divided — e.g. `30`
+#'   produces half-hour blocks such as 9:00 AM, 9:30 AM, 10:00 AM.
 #' @param sheet_id Google Sheets spreadsheet ID. Defaults to the value stored
 #'   by [meetr_auth()].
 #' @param deploy If `TRUE`, deploy the app to shinyapps.io instead of running
@@ -48,11 +51,12 @@
 meetr_launch <- function(
   csv,
   event_name,
-  app_title = "meetR",
-  timezone  = Sys.timezone(),
-  sheet_id  = Sys.getenv("MEETR_SHEET_ID"),
-  deploy    = FALSE,
-  app_name  = .slugify(app_title),
+  app_title   = "meetR",
+  timezone    = Sys.timezone(),
+  granularity = 60L,
+  sheet_id    = Sys.getenv("MEETR_SHEET_ID"),
+  deploy      = FALSE,
+  app_name    = .slugify(app_title),
   ...
 ) {
   .check_sheet_id(sheet_id)
@@ -65,19 +69,25 @@ meetr_launch <- function(
     )
   }
 
+  granularity <- as.integer(granularity)
+  if (!granularity %in% c(15L, 30L, 60L)) {
+    stop("'granularity' must be 15, 30, or 60.", call. = FALSE)
+  }
+
   if (!file.exists(csv)) {
     stop("CSV file not found: ", csv, call. = FALSE)
   }
 
   # 1. Parse the CSV
   message("meetR: parsing availability CSV...")
-  result <- .parse_csv_slots(csv)
+  result <- .parse_csv_slots(csv, granularity = granularity)
   if (!is.null(result$error)) stop(result$error, call. = FALSE)
 
   slots    <- result$slots
   n_slots  <- length(slots)
   n_dates  <- length(unique(substr(slots, 1, 10)))
-  message("meetR: found ", n_slots, " slots across ", n_dates, " date(s).")
+  message("meetR: found ", n_slots, " slot(s) across ", n_dates,
+          " date(s) (", granularity, "-min blocks).")
 
   # 2. Save event to Google Sheets
   message("meetR: saving event to Google Sheets...")

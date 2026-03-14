@@ -8,7 +8,7 @@
 #' @param filepath Path to the CSV file.
 #' @return A list with either `$slots` (character vector) or `$error` (string).
 #' @noRd
-.parse_csv_slots <- function(filepath) {
+.parse_csv_slots <- function(filepath, granularity = 60L) {
   df <- tryCatch(
     utils::read.csv(filepath, stringsAsFactors = FALSE, strip.white = TRUE),
     error = function(e) NULL
@@ -24,6 +24,9 @@
       paste(missing_cols, collapse = ", ")
     )))
   }
+
+  granularity  <- as.integer(granularity)
+  mins_per_hour <- seq(0L, 59L, by = granularity)   # e.g. c(0,30) for 30-min
 
   slots  <- character(0)
   errors <- character(0)
@@ -43,9 +46,12 @@
       ))
       next
     }
-    new_slots <- paste0(
-      format(d, "%Y-%m-%d"), "_", sprintf("%02d", s:(e - 1L))
-    )
+    new_slots <- unlist(lapply(s:(e - 1L), function(h) {
+      paste0(
+        format(d, "%Y-%m-%d"), "_",
+        sprintf("%02d", h), ":", sprintf("%02d", mins_per_hour)
+      )
+    }))
     slots <- c(slots, new_slots)
   }
 
@@ -69,4 +75,11 @@
 .format_hour <- function(h) {
   h <- as.integer(h)
   sprintf("%d %s", ifelse(h %% 12 == 0, 12, h %% 12), ifelse(h < 12, "AM", "PM"))
+}
+
+.format_slot_time <- function(h, m) {
+  h  <- as.integer(h)
+  m  <- as.integer(m)
+  hh <- ifelse(h %% 12 == 0, 12L, h %% 12L)
+  sprintf("%d:%02d %s", hh, m, ifelse(h < 12, "AM", "PM"))
 }

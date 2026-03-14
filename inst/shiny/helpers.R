@@ -12,9 +12,52 @@ slots_to_hours <- function(slots) {
   sort(unique(as.integer(substr(slots, 12, 13))))
 }
 
-format_hour <- function(h) {
-  h <- as.integer(h)
-  sprintf("%d %s", ifelse(h %% 12 == 0, 12, h %% 12), ifelse(h < 12, "AM", "PM"))
+# Format a time given hour h (0-23) and minute m (0-59) as "9:30 AM" etc.
+format_slot_time <- function(h, m) {
+  h  <- as.integer(h)
+  m  <- as.integer(m)
+  hh <- ifelse(h %% 12 == 0, 12L, h %% 12L)
+  sprintf("%d:%02d %s", hh, m, ifelse(h < 12, "AM", "PM"))
+}
+
+# Convert original slot IDs (organizer TZ) to display positions in to_tz.
+# Slot IDs use the format "YYYY-MM-DD_HH:MM".
+# Returns a data frame: original_slot, display_date, display_hour, display_min.
+# The grid uses display_date/display_hour/display_min for layout; data-slot
+# keeps original_slot so submissions are always stored in organizer TZ
+# without any server-side remapping.
+slots_in_tz <- function(slots, from_tz, to_tz) {
+  if (length(slots) == 0) {
+    return(data.frame(
+      original_slot = character(),
+      display_date  = as.Date(character()),
+      display_hour  = integer(),
+      display_min   = integer(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  if (identical(from_tz, to_tz)) {
+    return(data.frame(
+      original_slot = slots,
+      display_date  = as.Date(substr(slots, 1, 10)),
+      display_hour  = as.integer(substr(slots, 12, 13)),
+      display_min   = as.integer(substr(slots, 15, 16)),
+      stringsAsFactors = FALSE
+    ))
+  }
+  # "YYYY-MM-DD_HH:MM" → "YYYY-MM-DD HH:MM:00"
+  dt     <- as.POSIXct(
+    paste0(substr(slots, 1, 10), " ", substr(slots, 12, 16), ":00"),
+    tz = from_tz
+  )
+  dt_str <- format(dt, tz = to_tz, usetz = FALSE)  # "YYYY-MM-DD HH:MM:SS"
+  data.frame(
+    original_slot = slots,
+    display_date  = as.Date(substr(dt_str, 1, 10)),
+    display_hour  = as.integer(substr(dt_str, 12, 13)),
+    display_min   = as.integer(substr(dt_str, 15, 16)),
+    stringsAsFactors = FALSE
+  )
 }
 
 # ---- Google Sheets I/O ---------------------------------------------------
@@ -76,10 +119,21 @@ compute_slot_counts <- function(resp_df) {
 
 # ---- Grid builder --------------------------------------------------------
 
-build_grid <- function(dates, hours, valid_slots, slot_counts_df, n_users) {
-  count_lookup <- stats::setNames(slot_counts_df$count, slot_counts_df$slot)
-  name_lookup  <- stats::setNames(slot_counts_df$names, slot_counts_df$slot)
-  valid_set    <- as.character(valid_slots)
+build_grid <- function(slot_map, slot_counts_df, n_users) {
+  dates <- sort(unique(slot_map$display_date))
+
+  times     <- unique(slot_map[, c("display_hour", "display_min")])
+  times     <- times[order(times$display_hour, times$display_min), ]
+  row.names(times) <- NULL
+
+  slot_map$disp_key <- paste0(
+    format(slot_map$display_date, "%Y-%m-%d"), "_",
+    sprintf("%02d", slot_map$display_hour), ":",
+    sprintf("%02d", slot_map$display_min)
+  )
+  slot_lookup  <- stats::setNames(slot_map$original_slot, slot_map$disp_key)
+  count_lookup <- stats::setNames(slot_counts_df$count,   slot_counts_df$slot)
+  name_lookup  <- stats::setNames(slot_counts_df$names,   slot_counts_df$slot)
 
   header_cells <- shiny::tagList(
     shiny::tags$th("", style = "background:#f8f9fa; padding:6px 10px;"),
@@ -94,18 +148,22 @@ build_grid <- function(dates, hours, valid_slots, slot_counts_df, n_users) {
     })
   )
 
-  body_rows <- lapply(hours, function(h) {
+  body_rows <- lapply(seq_len(nrow(times)), function(ri) {
+    h <- times$display_hour[ri]
+    m <- times$display_min[ri]
     cells <- shiny::tagList(
       shiny::tags$td(
-        format_hour(h),
+        format_slot_time(h, m),
         style = paste0(
           "font-size:0.82em; color:#6c757d; text-align:right; padding:2px 8px;",
           " white-space:nowrap; background:#f8f9fa; border-right:2px solid #dee2e6;"
         )
       ),
       lapply(dates, function(d) {
-        slot_id  <- paste0(format(d, "%Y-%m-%d"), "_", sprintf("%02d", as.integer(h)))
-        is_valid <- slot_id %in% valid_set
+        disp_key  <- paste0(format(d, "%Y-%m-%d"), "_",
+                            sprintf("%02d", h), ":", sprintf("%02d", m))
+        orig_slot <- slot_lookup[disp_key]
+        is_valid  <- !is.na(orig_slot)
 
         if (!is_valid) {
           return(shiny::tags$td(style = paste0(
@@ -114,7 +172,7 @@ build_grid <- function(dates, hours, valid_slots, slot_counts_df, n_users) {
           )))
         }
 
-        cnt <- count_lookup[slot_id]
+        cnt <- count_lookup[orig_slot]
         if (is.null(cnt) || is.na(cnt)) cnt <- 0L
         pct <- cnt / max(n_users, 1)
 
@@ -127,7 +185,7 @@ build_grid <- function(dates, hours, valid_slots, slot_counts_df, n_users) {
           sprintf("rgb(%d,%d,%d)", r, g, b)
         }
 
-        tooltip <- name_lookup[slot_id]
+        tooltip <- name_lookup[orig_slot]
         if (is.null(tooltip) || is.na(tooltip)) tooltip <- ""
 
         label <- if (cnt > 0L) {
@@ -139,7 +197,7 @@ build_grid <- function(dates, hours, valid_slots, slot_counts_df, n_users) {
 
         shiny::tags$td(
           class       = "slot-cell",
-          `data-slot` = slot_id,
+          `data-slot` = orig_slot,
           title       = tooltip,
           style       = paste0(
             "background-color:", bg, "; cursor:pointer;",

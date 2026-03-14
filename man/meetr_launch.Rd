@@ -9,6 +9,7 @@ meetr_launch(
   event_name,
   app_title = "meetR",
   timezone = Sys.timezone(),
+  granularity = 60L,
   sheet_id = Sys.getenv("MEETR_SHEET_ID"),
   deploy = FALSE,
   app_name = .slugify(app_title),
@@ -27,6 +28,10 @@ Defaults to \code{"meetR"}.}
 \code{"Europe/London"}, \code{"UTC"}). Displayed in the app so respondents know
 which timezone the hours refer to. Defaults to the system timezone via
 \code{Sys.timezone()}.}
+
+\item{granularity}{Slot duration in minutes. Must be \code{15}, \code{30}, or \code{60}
+(default). Controls how finely the time grid is divided — e.g. \code{30}
+produces half-hour blocks such as 9:00 AM, 9:30 AM, 10:00 AM.}
 
 \item{sheet_id}{Google Sheets spreadsheet ID. Defaults to the value stored
 by \code{\link[=meetr_auth]{meetr_auth()}}.}
