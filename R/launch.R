@@ -22,6 +22,10 @@
 #' @param granularity Slot duration in minutes. Must be `15`, `30`, or `60`
 #'   (default). Controls how finely the time grid is divided — e.g. `30`
 #'   produces half-hour blocks such as 9:00 AM, 9:30 AM, 10:00 AM.
+#' @param expected_n Optional positive integer. The total number of people the
+#'   organiser expects to respond. When set, the app shows a progress bar and
+#'   "X / N responded" counter in the participants panel so respondents know
+#'   how many others are expected.
 #' @param sheet_id Google Sheets spreadsheet ID. Defaults to the value stored
 #'   by [meetr_auth()].
 #' @param deploy If `TRUE`, deploy the app to shinyapps.io instead of running
@@ -38,7 +42,9 @@
 #' meetr_auth("YOUR_SHEET_ID")
 #'
 #' # Use the bundled sample CSV as a starting point
-#' sample_csv <- system.file("extdata", "sample_availability.csv", package = "meetR")
+#' sample_csv <- system.file(
+#'   "extdata", "sample_availability.csv", package = "meetR"
+#' )
 #'
 #' # Run locally
 #' meetr_launch(sample_csv, event_name = "Team Sync Q2")
@@ -54,6 +60,7 @@ meetr_launch <- function(
   app_title   = "meetR",
   timezone    = Sys.timezone(),
   granularity = 60L,
+  expected_n  = NULL,
   sheet_id    = Sys.getenv("MEETR_SHEET_ID"),
   deploy      = FALSE,
   app_name    = .slugify(app_title),
@@ -72,6 +79,13 @@ meetr_launch <- function(
   granularity <- as.integer(granularity)
   if (!granularity %in% c(15L, 30L, 60L)) {
     stop("'granularity' must be 15, 30, or 60.", call. = FALSE)
+  }
+
+  if (!is.null(expected_n)) {
+    expected_n <- as.integer(expected_n)
+    if (is.na(expected_n) || expected_n < 1L) {
+      stop("'expected_n' must be a positive integer.", call. = FALSE)
+    }
   }
 
   if (!file.exists(csv)) {
@@ -102,6 +116,7 @@ meetr_launch <- function(
     event_name = event_name,
     app_title  = app_title,
     timezone   = timezone,
+    expected_n = expected_n,
     slots      = slots
   )
 
@@ -162,7 +177,8 @@ meetr_launch <- function(
     warning(
       "meetR: no credentials found to bundle. ",
       "The deployed app may fail to authenticate with Google Sheets. ",
-      "Call meetr_auth(sheet_id, path = 'service-account.json') before deploying.",
+      "Call meetr_auth(sheet_id, path = 'service-account.json') before",
+      " deploying.",
       call. = FALSE
     )
   }

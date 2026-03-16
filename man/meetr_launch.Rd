@@ -10,6 +10,7 @@ meetr_launch(
   app_title = "meetR",
   timezone = Sys.timezone(),
   granularity = 60L,
+  expected_n = NULL,
   sheet_id = Sys.getenv("MEETR_SHEET_ID"),
   deploy = FALSE,
   app_name = .slugify(app_title),
@@ -32,6 +33,11 @@ which timezone the hours refer to. Defaults to the system timezone via
 \item{granularity}{Slot duration in minutes. Must be \code{15}, \code{30}, or \code{60}
 (default). Controls how finely the time grid is divided — e.g. \code{30}
 produces half-hour blocks such as 9:00 AM, 9:30 AM, 10:00 AM.}
+
+\item{expected_n}{Optional positive integer. The total number of people the
+organiser expects to respond. When set, the app shows a progress bar and
+"X / N responded" counter in the participants panel so respondents know
+how many others are expected.}
 
 \item{sheet_id}{Google Sheets spreadsheet ID. Defaults to the value stored
 by \code{\link[=meetr_auth]{meetr_auth()}}.}
@@ -66,7 +72,9 @@ Multiple rows per date are allowed (e.g. morning + afternoon blocks).
 meetr_auth("YOUR_SHEET_ID")
 
 # Use the bundled sample CSV as a starting point
-sample_csv <- system.file("extdata", "sample_availability.csv", package = "meetR")
+sample_csv <- system.file(
+  "extdata", "sample_availability.csv", package = "meetR"
+)
 
 # Run locally
 meetr_launch(sample_csv, event_name = "Team Sync Q2")

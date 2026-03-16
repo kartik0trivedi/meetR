@@ -35,7 +35,8 @@ EVENT_NAME <- config$event_name
 APP_TITLE  <- config$app_title
 EV_TZ      <- if (!is.null(config$timezone) && nchar(config$timezone) > 0)
                  config$timezone else "UTC"
-EV_SLOTS   <- config$slots
+EV_SLOTS      <- config$slots
+EV_EXPECTED_N <- config$expected_n   # NULL when not set by organizer
 
 # ---- Auth ----------------------------------------------------------------
 
@@ -249,13 +250,46 @@ server <- function(input, output, session) {
 
   output$participant_badges <- renderUI({
     resp <- responses()
-    if (nrow(resp) == 0) {
-      return(p("No responses yet.",
-        style = "color:#6c757d; font-size:0.88em; margin-top:8px;"))
+    n    <- n_distinct(resp$user_name)
+
+    progress_ui <- if (!is.null(EV_EXPECTED_N)) {
+      pct   <- min(100L, round(n / EV_EXPECTED_N * 100L))
+      color <- if (n >= EV_EXPECTED_N) "#2e7d32" else "#0d6efd"
+      tagList(
+        div(style = "margin:6px 0 10px 0;",
+          div(
+            span(as.character(n),
+              style = paste0("font-weight:700; color:", color, ";")),
+            span(paste0(" / ", EV_EXPECTED_N, " responded"),
+              style = "color:#6c757d;"),
+            style = "font-size:0.88em; margin-bottom:4px;"
+          ),
+          div(style = paste0(
+            "background:#e9ecef; border-radius:4px; height:6px;"
+          ),
+            div(style = paste0(
+              "background:", color, "; border-radius:4px;",
+              " height:6px; width:", pct, "%;",
+              " transition:width 0.4s ease;"
+            ))
+          )
+        )
+      )
+    } else NULL
+
+    if (n == 0) {
+      return(tagList(
+        progress_ui,
+        p("No responses yet.",
+          style = "color:#6c757d; font-size:0.88em; margin-top:4px;")
+      ))
     }
-    tagList(lapply(unique(resp$user_name), function(u) {
-      span(class = "participant-badge", "\U0001f464 ", u)
-    }))
+    tagList(
+      progress_ui,
+      lapply(unique(resp$user_name), function(u) {
+        span(class = "participant-badge", "\U0001f464 ", u)
+      })
+    )
   })
 
   # Pre-fill user's previous selections when they type their name.
