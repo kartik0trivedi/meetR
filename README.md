@@ -6,7 +6,10 @@ An open-source, when2meet-style group scheduling tool for R users. Provide a CSV
 
 1. **Organiser** creates a Google Sheet, calls `meetr_auth()` + `meetr_setup()`, then runs `meetr_launch()` with a local CSV file.
 2. meetR saves the event to Google Sheets and launches (or deploys) a Shiny app.
-3. **Respondents** visit the app URL, enter their name, pick their preferred timezone, and click/drag on the time grid to mark when they are free.
+3. **Respondents** visit the app URL and complete a three-step flow:
+   - **Step 1 — Your Info:** enter name and choose a display timezone.
+   - **Step 2 — Select Times:** click or drag on the grid to mark availability (times shown in the chosen timezone; returning users are pre-filled automatically).
+   - **Step 3 — Confirm & Save:** review a summary of selected slots, then submit.
 4. The heatmap updates live as responses come in.
 
 ## Installation
@@ -88,6 +91,8 @@ meetr_launch(
 )
 ```
 
+> **Important:** Every call to `meetr_launch()` creates a new event with a fresh ID. If you re-run it after responses have been collected, the deployed app will point to the new event and existing responses will no longer be visible (they remain in the sheet but are not lost). To update a live app without losing responses, deploy directly via `rsconnect::deployApp()` using the existing `config.rds`.
+
 ## `meetr_launch()` parameters
 
 | parameter | default | description |
@@ -127,10 +132,12 @@ The credentials are automatically bundled into the deployment so the live app ca
 
 ## Shiny app features
 
+- **Three-step wizard** — name/timezone → grid selection → confirmation summary
 - Click or drag to select/deselect time slots
-- **Timezone selector** — respondents can view and mark times in their own timezone; submissions are stored in the organiser's timezone
+- **Timezone selector** — respondents view and submit in their own timezone; all data is stored in the organiser's timezone
+- **Confirmation step** — shows a day-by-day summary of selected slots before saving
 - **Progress bar** — shows `X / N responded` when `expected_n` is set
-- Previous submissions are pre-filled when a returning respondent types their name
+- Returning respondents are pre-filled with their previous selections on step 2
 - Live group availability heatmap (ggplot2)
 
 ## Dependencies
