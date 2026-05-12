@@ -18,7 +18,6 @@ config <- tryCatch(
 )
 
 if (is.null(config)) {
-  # Fallback: allows the app to start even without config (shows error UI)
   config <- list(
     sheet_id   = Sys.getenv("MEETR_SHEET_ID"),
     event_id   = Sys.getenv("MEETR_EVENT_ID"),
@@ -29,14 +28,14 @@ if (is.null(config)) {
   )
 }
 
-SHEET_ID   <- config$sheet_id
-EVENT_ID   <- config$event_id
-EVENT_NAME <- config$event_name
-APP_TITLE  <- config$app_title
-EV_TZ      <- if (!is.null(config$timezone) && nchar(config$timezone) > 0)
-                 config$timezone else "UTC"
+SHEET_ID      <- config$sheet_id
+EVENT_ID      <- config$event_id
+EVENT_NAME    <- config$event_name
+APP_TITLE     <- config$app_title
+EV_TZ         <- if (!is.null(config$timezone) && nchar(config$timezone) > 0)
+                   config$timezone else "UTC"
 EV_SLOTS      <- config$slots
-EV_EXPECTED_N <- config$expected_n   # NULL when not set by organizer
+EV_EXPECTED_N <- config$expected_n
 
 # ---- Auth ----------------------------------------------------------------
 
@@ -45,17 +44,11 @@ if (file.exists("credentials.json")) {
 } else if (dir.exists(".secrets")) {
   gs4_auth(cache = ".secrets", email = TRUE)
 }
-# If neither exists the app will rely on a pre-authenticated session
-# (e.g. when run locally via meetr_launch()).
 
-# ---- Constants from config -----------------------------------------------
+# ---- Constants -----------------------------------------------------------
 
-# EV_DATES is in organizer TZ — used for the event header date range display.
-# The interactive grid uses slot_map() which respects the respondent's chosen timezone.
 EV_DATES <- slots_to_dates(EV_SLOTS)
 
-# Curated list of common IANA timezones shown in the selector.
-# EV_TZ is prepended so the organizer's TZ is always available and appears first.
 COMMON_TIMEZONES <- unique(c(
   EV_TZ,
   "UTC",
@@ -138,6 +131,38 @@ body { font-family:"Helvetica Neue", Arial, sans-serif; background:#f4f6f9; }
 .container-fluid { max-width:1100px; margin:0 auto; padding:24px; }
 .app-brand { font-size:2.2rem; font-weight:700; color:#0d6efd; letter-spacing:0.5px; }
 .app-sub   { color:#6c757d; margin-bottom:24px; }
+/* Step indicator */
+.step-indicator {
+  display:flex; align-items:flex-start; margin-bottom:28px;
+}
+.step-dot {
+  display:flex; flex-direction:column; align-items:center; flex-shrink:0;
+}
+.step-circle {
+  width:34px; height:34px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:0.9em;
+  background:#e9ecef; color:#6c757d; border:2px solid #dee2e6;
+  transition: background 0.2s, border-color 0.2s;
+}
+.step-dot.active .step-circle { background:#0d6efd; color:white; border-color:#0d6efd; }
+.step-dot.done   .step-circle { background:#2e7d32; color:white; border-color:#2e7d32; }
+.step-label {
+  font-size:0.72em; color:#adb5bd; margin-top:5px;
+  text-align:center; white-space:nowrap;
+}
+.step-dot.active .step-label { color:#0d6efd; font-weight:600; }
+.step-dot.done   .step-label { color:#2e7d32; }
+.step-line {
+  flex:1; height:2px; background:#e9ecef; margin:0 10px; margin-top:17px;
+  transition: background 0.2s;
+}
+.step-line.done { background:#2e7d32; }
+/* Step nav buttons row */
+.step-nav { display:flex; justify-content:flex-end; gap:8px; margin-bottom:14px; }
+/* Slot summary in step 3 */
+.summary-day { margin-bottom:6px; font-size:0.93em; }
+.summary-empty { color:#6c757d; font-style:italic; }
 ')
 
 # ---- UI ------------------------------------------------------------------
@@ -163,7 +188,7 @@ ui <- fluidPage(
         div(class = "card", style = "padding:14px 24px;",
           h2(EVENT_NAME, style = "margin:0;"),
           p(
-            format(min(EV_DATES), "%b %d"), "\u2013",
+            format(min(EV_DATES), "%b %d"), "–",
             format(max(EV_DATES), "%b %d, %Y"),
             HTML(paste0(
               "&nbsp;&middot;&nbsp;",
@@ -174,31 +199,15 @@ ui <- fluidPage(
             style = "color:#6c757d; margin:4px 0 0 0;"
           )
         ),
-        # Main card
+        # Wizard card
         div(class = "card",
-          fluidRow(
-            column(3,
-              textInput("user_name", "Your Name",
-                placeholder = "Enter your name\u2026"),
-              selectInput(
-                "resp_tz",
-                "View times in:",
-                choices  = COMMON_TIMEZONES,
-                selected = EV_TZ,
-                width    = "100%"
-              ),
-              actionButton("btn_submit", "Save My Availability",
-                class = "btn-success",
-                style = "width:100%; margin-top:8px;"),
-              hr(),
-              strong("Participants"),
-              uiOutput("participant_badges")
-            ),
-            column(9,
-              uiOutput("grid_header"),
-              div(style = "overflow-x:auto;", uiOutput("grid_ui"))
-            )
-          )
+          uiOutput("step_indicator"),
+          uiOutput("step_ui")
+        ),
+        # Participants (always visible)
+        div(class = "card", style = "padding:16px 24px;",
+          strong("Participants"),
+          uiOutput("participant_badges")
         ),
         uiOutput("heatmap_section")
       )
@@ -210,6 +219,8 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
 
+  step            <- reactiveVal(1L)
+  saved_slots     <- reactiveVal(character(0))
   refresh_trigger <- reactiveVal(0L)
 
   responses <- reactive({
@@ -221,13 +232,86 @@ server <- function(input, output, session) {
     compute_slot_counts(responses())
   })
 
-  # Recompute display positions whenever the respondent changes their timezone.
-  # data-slot in each cell always holds the original (organizer-TZ) slot ID,
-  # so submitted values require no server-side remapping.
   slot_map <- reactive({
     tz <- input$resp_tz %||% EV_TZ
     slots_in_tz(EV_SLOTS, EV_TZ, tz)
   })
+
+  # ---- Step indicator ---------------------------------------------------
+
+  output$step_indicator <- renderUI({
+    s <- step()
+    defs <- list(
+      list(n = 1L, label = "Your Info"),
+      list(n = 2L, label = "Select Times"),
+      list(n = 3L, label = "Confirm & Save")
+    )
+    items <- lapply(seq_along(defs), function(i) {
+      d         <- defs[[i]]
+      is_active <- d$n == s
+      is_done   <- d$n < s
+      cls <- paste0("step-dot",
+                    if (is_active) " active" else if (is_done) " done" else "")
+      line <- if (i < length(defs))
+        div(class = paste0("step-line", if (is_done) " done" else ""))
+      else NULL
+      tagList(
+        div(class = cls,
+          div(class = "step-circle",
+            if (is_done) HTML("&#10003;") else as.character(d$n)),
+          div(class = "step-label", d$label)
+        ),
+        line
+      )
+    })
+    div(class = "step-indicator", items)
+  })
+
+  # ---- Step content -----------------------------------------------------
+
+  output$step_ui <- renderUI({
+    switch(step(),
+      `1` = div(style = "max-width:440px;",
+        textInput("user_name", "Your Name",
+          value       = isolate(input$user_name %||% ""),
+          placeholder = "Enter your name…"),
+        div(style = "margin-top:12px;",
+          selectInput("resp_tz", "View times in:",
+            choices  = COMMON_TIMEZONES,
+            selected = isolate(input$resp_tz %||% EV_TZ),
+            width    = "100%")
+        ),
+        div(style = "margin-top:20px;",
+          actionButton("btn_next_1", "Continue →",
+            class = "btn btn-primary",
+            style = "padding:8px 28px;")
+        )
+      ),
+
+      `2` = div(
+        div(class = "step-nav",
+          actionButton("btn_back_2", "← Back",
+            class = "btn btn-outline-secondary btn-sm"),
+          actionButton("btn_next_2", "Next →",
+            class = "btn btn-primary btn-sm")
+        ),
+        uiOutput("grid_header"),
+        div(style = "overflow-x:auto;", uiOutput("grid_ui"))
+      ),
+
+      `3` = div(
+        uiOutput("slot_summary"),
+        div(style = "margin-top:24px; display:flex; gap:10px;",
+          actionButton("btn_back_3", "← Back",
+            class = "btn btn-outline-secondary"),
+          actionButton("btn_submit", "Save My Availability",
+            class = "btn btn-success")
+        )
+      )
+    )
+  })
+
+  # ---- Grid outputs (used in step 2) ------------------------------------
 
   output$grid_header <- renderUI({
     tz <- input$resp_tz %||% EV_TZ
@@ -240,13 +324,58 @@ server <- function(input, output, session) {
       "<span style='color:#aaa;'>Grey</span> = outside this event",
       "&nbsp;&nbsp;<b>All times: ", tz, "</b>"
     )),
-    style = "font-size:0.88em; color:#6c757d; margin-bottom:8px;")
+    style = "font-size:0.88em; color:#6c757d; margin-bottom:10px;")
   })
 
   output$grid_ui <- renderUI({
     n_users <- n_distinct(responses()$user_name)
     build_grid(slot_map(), slot_counts(), n_users)
   })
+
+  # ---- Slot summary (step 3) --------------------------------------------
+
+  output$slot_summary <- renderUI({
+    slots <- saved_slots()
+    uname <- trimws(input$user_name %||% "")
+    tz    <- input$resp_tz %||% EV_TZ
+
+    name_line <- div(style = "margin-bottom:14px;",
+      "Submitting for: ",
+      tags$strong(uname),
+      HTML(paste0(
+        "&nbsp;<span style='background:#e9ecef; border-radius:4px;",
+        " padding:1px 7px; font-size:0.82em; color:#495057;'>", tz, "</span>"
+      ))
+    )
+
+    if (length(slots) == 0) {
+      return(tagList(
+        name_line,
+        p(class = "summary-empty",
+          "No slots selected — you will be marked as unavailable for all times.")
+      ))
+    }
+
+    dates <- sort(unique(substr(slots, 1, 10)))
+    tagList(
+      name_line,
+      p(paste0(length(slots), " slot(s) across ", length(dates), " day(s):"),
+        style = "color:#6c757d; font-size:0.88em; margin-bottom:10px;"),
+      lapply(dates, function(d) {
+        day_slots <- sort(slots[substr(slots, 1, 10) == d])
+        times_str <- paste(sapply(day_slots, function(sl) {
+          format_slot_time(as.integer(substr(sl, 12, 13)),
+                           as.integer(substr(sl, 15, 16)))
+        }), collapse = ", ")
+        div(class = "summary-day",
+          tags$strong(format(as.Date(d), "%A, %b %d")),
+          " — ", times_str
+        )
+      })
+    )
+  })
+
+  # ---- Participants (always visible) ------------------------------------
 
   output$participant_badges <- renderUI({
     resp <- responses()
@@ -264,9 +393,7 @@ server <- function(input, output, session) {
               style = "color:#6c757d;"),
             style = "font-size:0.88em; margin-bottom:4px;"
           ),
-          div(style = paste0(
-            "background:#e9ecef; border-radius:4px; height:6px;"
-          ),
+          div(style = "background:#e9ecef; border-radius:4px; height:6px;",
             div(style = paste0(
               "background:", color, "; border-radius:4px;",
               " height:6px; width:", pct, "%;",
@@ -292,24 +419,55 @@ server <- function(input, output, session) {
     )
   })
 
-  # Pre-fill user's previous selections when they type their name.
-  # prev slots are original (organizer-TZ) slot IDs; data-slot on each cell
-  # also holds original IDs, so this works regardless of resp_tz.
-  observeEvent(input$user_name, {
-    req(nchar(trimws(input$user_name %||% "")) > 0)
-    resp  <- responses()
-    match <- resp[resp$user_name == trimws(input$user_name), ]
-    prev  <- if (nrow(match) > 0 && !is.na(match$slots[1]) && match$slots[1] != "") {
-      unlist(strsplit(match$slots[1], ","))
-    } else character(0)
-    session$sendCustomMessage("preSelectSlots", as.list(prev))
+  # ---- Step navigation --------------------------------------------------
+
+  observeEvent(input$btn_next_1, {
+    uname <- trimws(input$user_name %||% "")
+    if (nchar(uname) == 0) {
+      showNotification("Please enter your name before continuing.",
+        type = "warning", duration = 3)
+      return()
+    }
+    step(2L)
+  })
+
+  # Pre-fill grid after step 2 renders (two flush cycles: step_ui then grid_ui)
+  observeEvent(step(), {
+    req(step() == 2L)
+    uname <- trimws(isolate(input$user_name %||% ""))
+    # Prefer slots saved in this session; fall back to prior GSheets submission
+    prev <- isolate(saved_slots())
+    if (length(prev) == 0) {
+      resp  <- isolate(responses())
+      match <- resp[resp$user_name == uname, ]
+      if (nrow(match) > 0 && !is.na(match$slots[1]) && match$slots[1] != "") {
+        prev <- unlist(strsplit(match$slots[1], ","))
+      }
+    }
+    if (length(prev) > 0) {
+      slots_to_send <- prev
+      session$onFlushed(function() {
+        session$onFlushed(function() {
+          session$sendCustomMessage("preSelectSlots", as.list(slots_to_send))
+        }, once = TRUE)
+      }, once = TRUE)
+    }
   }, ignoreInit = TRUE)
+
+  observeEvent(input$btn_back_2, { step(1L) })
+
+  observeEvent(input$btn_next_2, {
+    saved_slots(input$selected_slots %||% character(0))
+    step(3L)
+  })
+
+  observeEvent(input$btn_back_3, { step(2L) })
 
   observeEvent(input$btn_submit, {
     uname <- trimws(input$user_name %||% "")
     req(nchar(uname) > 0)
 
-    slots <- input$selected_slots %||% character(0)
+    slots <- saved_slots()
 
     outcome <- tryCatch({
       save_response(SHEET_ID, EVENT_ID, uname, slots)
@@ -327,13 +485,18 @@ server <- function(input, output, session) {
       paste0("Saved! ", length(slots), " slot(s) recorded for ", uname, "."),
       type = "message", duration = 4
     )
+    saved_slots(character(0))
+    step(1L)
   })
+
+  # ---- Heatmap ----------------------------------------------------------
 
   output$heatmap_section <- renderUI({
     if (nrow(responses()) == 0) return(NULL)
     div(class = "card",
       h4("Group Availability Heatmap"),
-      p(paste0("Each cell shows how many people are free at that time. Times shown in organizer timezone (", EV_TZ, ")."),
+      p(paste0("Each cell shows how many people are free at that time. ",
+               "Times shown in organizer timezone (", EV_TZ, ")."),
         style = "color:#6c757d; font-size:0.88em;"),
       plotOutput("heatmap_plot", height = "300px")
     )

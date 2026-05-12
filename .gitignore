@@ -15,4 +15,10 @@ config.rds
 
 test.R
 
-TODO.md
+# Ignore all CSVs except the bundled sample
+*.csv
+!inst/extdata/sample_availability.csv
+
+# Ignore all Markdown except README
+*.md
+!README.md
