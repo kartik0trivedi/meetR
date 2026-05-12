@@ -2,6 +2,21 @@
 
 An open-source, when2meet-style group scheduling tool for R users. Provide a CSV of proposed dates and hours, authenticate with Google Sheets, and meetR launches a shareable Shiny app that collects and visualises group availability in real time.
 
+## Agent / LLM workflow
+
+meetR is designed to work with AI coding assistants. Once installed, run `meetr_agents()` to print the built-in agent instructions, then hand them to Claude Code, Codex, or any assistant along with your scheduling request — which can be anything: a pasted email thread, a Slack message, or a plain prompt like *"schedule a 1-hour meeting for next week, mornings only, three people across EST and CET"*. The agent will handle timezone inference, overlap calculation, CSV generation, and deployment.
+
+```r
+library(meetR)
+meetr_agents()   # prints instructions your agent needs
+```
+
+Then tell your agent:
+
+> "Use the meetR instructions above to schedule a meeting based on: [paste email, message, or describe availability in plain text]"
+
+---
+
 ## How it works
 
 1. **Organiser** creates a Google Sheet, calls `meetr_auth()` + `meetr_setup()`, then runs `meetr_launch()` with a local CSV file.

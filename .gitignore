@@ -22,3 +22,5 @@ test.R
 # Ignore all Markdown except README
 *.md
 !README.md
+!AGENTS.md
+!LICENSE
