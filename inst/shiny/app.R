@@ -113,24 +113,53 @@ $(function() {
 ')
 
 GRID_CSS <- HTML('
-.slot-cell:hover { opacity:0.8; outline:2px solid #0d6efd; outline-offset:-2px; }
+:root {
+  --solar-base03:#002b36;
+  --solar-base02:#073642;
+  --solar-base1:#93a1a1;
+  --solar-base0:#839496;
+  --solar-base2:#eee8d5;
+  --solar-base3:#fdf6e3;
+  --solar-blue:#268bd2;
+  --solar-amber:#b58900;
+  --solar-amber-soft:#f5e8bf;
+}
+.slot-cell:hover { opacity:0.85; outline:2px solid var(--solar-blue); outline-offset:-2px; }
 .slot-cell.user-selected {
-  outline: 3px solid #0d6efd !important;
+  outline: 3px solid var(--solar-blue) !important;
   outline-offset: -3px;
-  background-color: rgba(13,110,253,0.45) !important;
+  background-color: rgba(38,139,210,0.38) !important;
 }
 .participant-badge {
-  display:inline-block; background:#e9ecef; border-radius:20px;
+  display:inline-block; background:var(--solar-base2); border-radius:20px;
   padding:3px 10px; margin:3px; font-size:0.82em;
 }
 .card {
-  background:white; border-radius:10px; padding:24px;
-  margin-bottom:18px; box-shadow:0 2px 8px rgba(0,0,0,0.07);
+  background:#fffdf5; border:1px solid var(--solar-base2); border-radius:10px; padding:24px;
+  margin-bottom:18px; box-shadow:0 2px 8px rgba(101,86,40,0.08);
 }
-body { font-family:"Helvetica Neue", Arial, sans-serif; background:#f4f6f9; }
+body { font-family:"Helvetica Neue", Arial, sans-serif; background:var(--solar-base3); color:var(--solar-base02); }
 .container-fluid { max-width:1100px; margin:0 auto; padding:24px; }
-.app-brand { font-size:2.2rem; font-weight:700; color:#0d6efd; letter-spacing:0.5px; }
-.app-sub   { color:#6c757d; margin-bottom:24px; }
+.app-brand { font-size:2.2rem; font-weight:700; color:var(--solar-blue); letter-spacing:0.5px; }
+.app-sub   { color:var(--solar-base0); margin-bottom:24px; }
+.btn-primary {
+  background-color:var(--solar-blue); border-color:var(--solar-blue);
+}
+.btn-primary:hover, .btn-primary:focus {
+  background-color:#1d73ad; border-color:#1d73ad;
+}
+.btn-success {
+  background-color:var(--solar-amber); border-color:var(--solar-amber);
+}
+.btn-success:hover, .btn-success:focus {
+  background-color:#9d7600; border-color:#9d7600;
+}
+.btn-outline-secondary {
+  color:var(--solar-base0); border-color:var(--solar-base1);
+}
+.btn-outline-secondary:hover, .btn-outline-secondary:focus {
+  background-color:var(--solar-base2); color:var(--solar-base02); border-color:var(--solar-base0);
+}
 /* Step indicator */
 .step-indicator {
   display:flex; align-items:flex-start; margin-bottom:28px;
@@ -142,36 +171,36 @@ body { font-family:"Helvetica Neue", Arial, sans-serif; background:#f4f6f9; }
   width:34px; height:34px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
   font-weight:700; font-size:0.9em;
-  background:#e9ecef; color:#6c757d; border:2px solid #dee2e6;
+  background:var(--solar-base2); color:var(--solar-base0); border:2px solid #d8d0b6;
   transition: background 0.2s, border-color 0.2s;
 }
-.step-dot.active .step-circle { background:#0d6efd; color:white; border-color:#0d6efd; }
-.step-dot.done   .step-circle { background:#2e7d32; color:white; border-color:#2e7d32; }
+.step-dot.active .step-circle { background:var(--solar-blue); color:white; border-color:var(--solar-blue); }
+.step-dot.done   .step-circle { background:var(--solar-amber); color:white; border-color:var(--solar-amber); }
 .step-label {
-  font-size:0.72em; color:#adb5bd; margin-top:5px;
+  font-size:0.72em; color:var(--solar-base1); margin-top:5px;
   text-align:center; white-space:nowrap;
 }
-.step-dot.active .step-label { color:#0d6efd; font-weight:600; }
-.step-dot.done   .step-label { color:#2e7d32; }
+.step-dot.active .step-label { color:var(--solar-blue); font-weight:600; }
+.step-dot.done   .step-label { color:var(--solar-amber); }
 .step-line {
-  flex:1; height:2px; background:#e9ecef; margin:0 10px; margin-top:17px;
+  flex:1; height:2px; background:var(--solar-base2); margin:0 10px; margin-top:17px;
   transition: background 0.2s;
 }
-.step-line.done { background:#2e7d32; }
+.step-line.done { background:var(--solar-amber); }
 /* Step nav buttons row */
 .step-nav { display:flex; justify-content:flex-end; gap:8px; margin-bottom:14px; }
 /* Slot summary in step 3 */
 .summary-day { margin-bottom:6px; font-size:0.93em; }
-.summary-empty { color:#6c757d; font-style:italic; }
+.summary-empty { color:var(--solar-base0); font-style:italic; }
 /* Footer */
 .app-footer {
-  text-align:center; padding:18px 0 28px 0; color:#adb5bd; font-size:0.82em;
+  text-align:center; padding:18px 0 28px 0; color:var(--solar-base1); font-size:0.82em;
 }
 .app-footer a {
-  color:#6c757d; text-decoration:none; display:inline-flex;
+  color:var(--solar-base0); text-decoration:none; display:inline-flex;
   align-items:center; gap:6px; transition:color 0.15s;
 }
-.app-footer a:hover { color:#0d6efd; }
+.app-footer a:hover { color:var(--solar-blue); }
 .app-footer svg { vertical-align:middle; }
 ')
 
@@ -202,11 +231,11 @@ ui <- fluidPage(
             format(max(EV_DATES), "%b %d, %Y"),
             HTML(paste0(
               "&nbsp;&middot;&nbsp;",
-              "<span style='background:#e9ecef; border-radius:4px;",
+              "<span style='background:#eee8d5; border-radius:4px;",
               " padding:1px 7px; font-size:0.82em;'>",
               "Organizer timezone: ", EV_TZ, "</span>"
             )),
-            style = "color:#6c757d; margin:4px 0 0 0;"
+            style = "color:#839496; margin:4px 0 0 0;"
           )
         ),
         # Wizard card
@@ -335,14 +364,14 @@ server <- function(input, output, session) {
     tz <- input$resp_tz %||% EV_TZ
     p(HTML(paste0(
       "<b>Click or drag</b> to mark when you're free.&nbsp;",
-      "<span style='color:#0d6efd;font-weight:bold;'>Blue</span>",
+      "<span style='color:#268bd2;font-weight:bold;'>Blue</span>",
       " = your selection &nbsp;|&nbsp; ",
-      "<span style='color:#2e7d32;font-weight:bold;'>Green</span>",
+      "<span style='color:#b58900;font-weight:bold;'>Amber</span>",
       " = group overlap &nbsp;|&nbsp; ",
-      "<span style='color:#aaa;'>Grey</span> = outside this event",
+      "<span style='color:#93a1a1;'>Warm grey</span> = outside this event",
       "&nbsp;&nbsp;<b>All times: ", tz, "</b>"
     )),
-    style = "font-size:0.88em; color:#6c757d; margin-bottom:10px;")
+    style = "font-size:0.88em; color:#839496; margin-bottom:10px;")
   })
 
   output$grid_ui <- renderUI({
@@ -361,8 +390,8 @@ server <- function(input, output, session) {
       "Submitting for: ",
       tags$strong(uname),
       HTML(paste0(
-        "&nbsp;<span style='background:#e9ecef; border-radius:4px;",
-        " padding:1px 7px; font-size:0.82em; color:#495057;'>", tz, "</span>"
+        "&nbsp;<span style='background:#eee8d5; border-radius:4px;",
+        " padding:1px 7px; font-size:0.82em; color:#073642;'>", tz, "</span>"
       ))
     )
 
@@ -378,7 +407,7 @@ server <- function(input, output, session) {
     tagList(
       name_line,
       p(paste0(length(slots), " slot(s) across ", length(dates), " day(s):"),
-        style = "color:#6c757d; font-size:0.88em; margin-bottom:10px;"),
+        style = "color:#839496; font-size:0.88em; margin-bottom:10px;"),
       lapply(dates, function(d) {
         day_slots <- sort(slots[substr(slots, 1, 10) == d])
         times_str <- paste(sapply(day_slots, function(sl) {
@@ -401,17 +430,17 @@ server <- function(input, output, session) {
 
     progress_ui <- if (!is.null(EV_EXPECTED_N)) {
       pct   <- min(100L, round(n / EV_EXPECTED_N * 100L))
-      color <- if (n >= EV_EXPECTED_N) "#2e7d32" else "#0d6efd"
+      color <- if (n >= EV_EXPECTED_N) "#b58900" else "#268bd2"
       tagList(
         div(style = "margin:6px 0 10px 0;",
           div(
             span(as.character(n),
               style = paste0("font-weight:700; color:", color, ";")),
             span(paste0(" / ", EV_EXPECTED_N, " responded"),
-              style = "color:#6c757d;"),
+              style = "color:#839496;"),
             style = "font-size:0.88em; margin-bottom:4px;"
           ),
-          div(style = "background:#e9ecef; border-radius:4px; height:6px;",
+          div(style = "background:#eee8d5; border-radius:4px; height:6px;",
             div(style = paste0(
               "background:", color, "; border-radius:4px;",
               " height:6px; width:", pct, "%;",
@@ -426,7 +455,7 @@ server <- function(input, output, session) {
       return(tagList(
         progress_ui,
         p("No responses yet.",
-          style = "color:#6c757d; font-size:0.88em; margin-top:4px;")
+          style = "color:#839496; font-size:0.88em; margin-top:4px;")
       ))
     }
     tagList(
@@ -515,7 +544,7 @@ server <- function(input, output, session) {
       h4("Group Availability Heatmap"),
       p(paste0("Each cell shows how many people are free at that time. ",
                "Times shown in organizer timezone (", EV_TZ, ")."),
-        style = "color:#6c757d; font-size:0.88em;"),
+        style = "color:#839496; font-size:0.88em;"),
       plotOutput("heatmap_plot", height = "300px")
     )
   })
@@ -548,10 +577,10 @@ server <- function(input, output, session) {
       geom_tile(color = "white", linewidth = 0.4) +
       geom_text(
         data = filter(plot_data, count > 0),
-        aes(label = count), size = 3.5, color = "white", fontface = "bold"
+        aes(label = count), size = 3.5, color = "#073642", fontface = "bold"
       ) +
       scale_fill_gradient(
-        low = "#e8f5e9", high = "#2e7d32",
+        low = "#fdf6e3", high = "#b58900",
         limits = c(0, n_users), name = "# Available"
       ) +
       scale_x_discrete(labels = function(x) format(as.Date(x), "%a\n%m/%d")) +

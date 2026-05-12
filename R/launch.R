@@ -133,7 +133,7 @@ meetr_launch <- function(
 # ---- Internal launchers --------------------------------------------------
 
 .run_app_local <- function(config, ...) {
-  app_dir <- system.file("shiny", package = "meetR")
+  app_dir <- .shiny_app_dir()
   saveRDS(config, file.path(app_dir, "config.rds"))
   message("meetR: launching app locally...")
   shiny::runApp(app_dir, ...)
@@ -154,7 +154,7 @@ meetr_launch <- function(
   on.exit(unlink(deploy_dir, recursive = TRUE), add = TRUE)
 
   # Copy app files from inst/shiny/
-  inst_dir <- system.file("shiny", package = "meetR")
+  inst_dir <- .shiny_app_dir()
   file.copy(
     list.files(inst_dir, full.names = TRUE),
     deploy_dir,
@@ -200,4 +200,14 @@ meetr_launch <- function(
 
 .generate_event_id <- function() {
   paste0(sample(c(letters, 0:9), 8, replace = TRUE), collapse = "")
+}
+
+.shiny_app_dir <- function() {
+  source_dir <- file.path(getwd(), "inst", "shiny")
+  if (file.exists(file.path(getwd(), "DESCRIPTION")) &&
+      dir.exists(source_dir)) {
+    return(source_dir)
+  }
+
+  system.file("shiny", package = "meetR")
 }

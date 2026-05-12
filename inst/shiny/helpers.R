@@ -136,14 +136,14 @@ build_grid <- function(slot_map, slot_counts_df, n_users) {
   name_lookup  <- stats::setNames(slot_counts_df$names,   slot_counts_df$slot)
 
   header_cells <- shiny::tagList(
-    shiny::tags$th("", style = "background:#f8f9fa; padding:6px 10px;"),
+    shiny::tags$th("", style = "background:#eee8d5; padding:6px 10px;"),
     lapply(dates, function(d) {
       shiny::tags$th(
         shiny::HTML(paste0(
           "<span>", format(d, "%a"), "</span>",
           "<br/><small>", format(d, "%m/%d"), "</small>"
         )),
-        style = "min-width:65px; text-align:center; background:#f8f9fa; padding:6px;"
+        style = "min-width:65px; text-align:center; background:#eee8d5; padding:6px;"
       )
     })
   )
@@ -155,8 +155,8 @@ build_grid <- function(slot_map, slot_counts_df, n_users) {
       shiny::tags$td(
         format_slot_time(h, m),
         style = paste0(
-          "font-size:0.82em; color:#6c757d; text-align:right; padding:2px 8px;",
-          " white-space:nowrap; background:#f8f9fa; border-right:2px solid #dee2e6;"
+          "font-size:0.82em; color:#839496; text-align:right; padding:2px 8px;",
+          " white-space:nowrap; background:#eee8d5; border-right:2px solid #d8d0b6;"
         )
       ),
       lapply(dates, function(d) {
@@ -167,8 +167,8 @@ build_grid <- function(slot_map, slot_counts_df, n_users) {
 
         if (!is_valid) {
           return(shiny::tags$td(style = paste0(
-            "background:#ececec; width:60px; height:28px;",
-            " border:1px solid #dee2e6; cursor:not-allowed;"
+            "background:#eee8d5; width:60px; height:28px;",
+            " border:1px solid #d8d0b6; cursor:not-allowed;"
           )))
         }
 
@@ -177,11 +177,11 @@ build_grid <- function(slot_map, slot_counts_df, n_users) {
         pct <- cnt / max(n_users, 1)
 
         bg <- if (cnt == 0L) {
-          "#ffffff"
+          "#fffdf5"
         } else {
-          r <- round(248 - pct * (248 - 46))
-          g <- round(249 - pct * (249 - 125))
-          b <- round(250 - pct * (250 - 50))
+          r <- round(253 - pct * (253 - 181))
+          g <- round(246 - pct * (246 - 137))
+          b <- round(227 - pct * (227 - 0))
           sprintf("rgb(%d,%d,%d)", r, g, b)
         }
 
@@ -191,7 +191,7 @@ build_grid <- function(slot_map, slot_counts_df, n_users) {
         label <- if (cnt > 0L) {
           shiny::tags$span(
             cnt,
-            style = "font-size:0.75em; font-weight:700; color:rgba(255,255,255,0.9); pointer-events:none;"
+            style = "font-size:0.75em; font-weight:700; color:#073642; pointer-events:none;"
           )
         } else NULL
 
@@ -202,7 +202,7 @@ build_grid <- function(slot_map, slot_counts_df, n_users) {
           style       = paste0(
             "background-color:", bg, "; cursor:pointer;",
             " width:60px; height:28px; text-align:center;",
-            " vertical-align:middle; border:1px solid #dee2e6;"
+            " vertical-align:middle; border:1px solid #d8d0b6;"
           ),
           label
         )
